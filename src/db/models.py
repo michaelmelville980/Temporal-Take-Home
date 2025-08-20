@@ -23,8 +23,8 @@ class Payments(Base):
 
 class Events(Base):
     __tablename__ = "events"
-    id = Column()
-    order_id = Column()
-    type = Column()
-    payload_json = Column()
-    ts = Column()
+    id = Column(String(64), primary_key=True, autoincrement=True)
+    order_id = Column(String, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    type = Column(String(64), nullable=False)
+    payload_json = Column(JSONB, nullable=True)
+    ts = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
