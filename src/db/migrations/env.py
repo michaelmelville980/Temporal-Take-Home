@@ -7,7 +7,7 @@ from alembic import context
 
 from dotenv import load_dotenv
 import os
-load_dotenv()
+
 
 from src.db.models import Base
 
@@ -16,6 +16,7 @@ from src.db.models import Base
 config = context.config
 
 # Set database URL to env variable
+load_dotenv()
 database_url = os.getenv("DATABASE_URL")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
