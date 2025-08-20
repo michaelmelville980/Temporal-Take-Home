@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from error_helper import flaky_call
 
 async def package_prepared(order: Dict[str, Any]) -> str:
     await flaky_call()

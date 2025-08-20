@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from error_helper import flaky_call
 
 async def order_received(order_id: str) -> Dict[str, Any]:
     await flaky_call()
