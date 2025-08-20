@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, func, JSONB, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, DateTime, func, ForeignKey, Numeric
 from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 Base = declarative_base()
@@ -23,7 +24,7 @@ class Payments(Base):
 
 class Events(Base):
     __tablename__ = "events"
-    id = Column(String(64), primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(String, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     type = Column(String(64), nullable=False)
     payload_json = Column(JSONB, nullable=True)
