@@ -1,0 +1,26 @@
+[project]
+name = "temporal-take-home"
+version = "0.1.0"
+description = "Uses Temporal's open-source SDK and dev server to orchestrate an Order Lifecycle."
+authors = [
+    {name = "michael1303",email = "mmelville980@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "temporalio (>=1.15.0,<2.0.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+commitizen = "^4.8.3"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "v$version"
+update_changelog_on_bump = true
+
