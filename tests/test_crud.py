@@ -28,6 +28,20 @@ def test_create_order_multiple(db_session):
     assert got1.address_json == ORDER_ADDRESS and got2.address_json == ORDER_ADDRESS_2
 
 
+def test_validate_order(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    crud.validate_order(db_session, ORDER_ID)
+    got = db_session.query(models.Orders).filter_by(id=ORDER_ID).one_or_none()
+    assert got is not None
+    assert got.id == ORDER_ID
+    assert got.state == "validated"
+    assert got.items == ORDER_ITEM
+    assert got.address_json == ORDER_ADDRESS
+
+
+
+
+
 
 
 
