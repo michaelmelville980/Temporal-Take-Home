@@ -10,6 +10,9 @@ def create_event(db: Session, order_id: str, type: str, payload_json: dict = Non
     return event
 
 def create_order(db: Session, order_id: str, items: List[Dict[str, Any]], address_json: Dict[str, Any]):
+    order = db.query(models.Orders).filter_by(id=order_id).one_or_none()
+    if order:
+        return order  
     order = models.Orders(id=order_id, items=items, address_json=address_json)
     db.add(order)
     db.commit()
