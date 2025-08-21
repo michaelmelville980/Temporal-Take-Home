@@ -1,24 +1,32 @@
 from temporalio import workflow
 from datetime import timedelta
-from activities import PreparePackage, DispatchCarrier
-from . import ShippingWorkflow
+from activities.shipping_activities import PreparePackage, DispatchCarrier
+from workflows.order_workflow import OrderWorkflow
 from typing import Dict, Any, List
+import asyncio 
 
 @workflow.defn
 class ShippingWorkflow:
     @workflow.run
-    async def run (self, order_id: str):
+    async def run (self, order_id: str, parent_id: str):
+        parent = workflow.get_external_workflow_handle(parent_id)
         
         # Step 1: PreparePackage
-        await workflow.execute_activity(PreparePackage, order_id, schedule_to_close_timeout=timedelta(seconds=300))
+        try:
+            await workflow.execute_activity(PreparePackage, order_id, schedule_to_close_timeout=timedelta(seconds=300))
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            await parent.signal("dispatch_failed", "PreparePackage failed")
+            raise
 
         # Step 2: DispatchCarrier
-        await workflow.execute_activity(DispatchCarrier, order_id, schedule_to_close_timeout=timedelta(seconds=300))
+        try:
+            await workflow.execute_activity(DispatchCarrier, order_id, schedule_to_close_timeout=timedelta(seconds=300))
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            await parent.signal("dispatch_failed", "DispatchCarrier failed")
+            raise
 
-        
-
-   
-        
-
-                   
-      
+        return
