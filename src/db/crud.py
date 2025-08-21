@@ -91,6 +91,44 @@ def ship_order(db: Session, order_id: str):
         create_event(db, order_id, "ship_order", {"message": "success, order shipped"})
     return order
 
+def remove_and_refund_order(db: Session, order_id: str, payment_id: str):
+    order = db.query(models.Orders).filter_by(id=order_id).one_or_none()
+
+    if order is None:
+        create_event(db, order_id, "remove_and_refund_order", {"message": "error, no order found"})
+
+    if order.items and len(order.items) > 0:
+
+        # Cancelling Order
+        order.state = "cancelled"
+        db.commit()
+        db.refresh(order)
+        create_event(db, order_id, "remove_and_refund_order", {"message": "success, order cancelled"})
+
+        # Refunding Customer (if needed)
+        payment = db.query(models.Payments).filter_by(payment_id=payment_id).one_or_none()
+        if payment and payment.status == "charged":
+            payment.status = "refunded"
+            db.commit()
+            db.refresh(payment)
+            create_event(db, order_id, "remove_and_refund_order", {"message": "success, refund issued"})
+
+
+
+def change_address(db: Session, order_id: str, address: Dict[str, Any]):
+
+    order = db.query(models.Orders).filter_by(id=order_id).one_or_none()
+
+    if order is None:
+        create_event(db, order_id, "change_address", {"message": "error, no order found"})
+
+    if order.items and len(order.items) > 0:
+        order.address_json = address
+        db.commit()
+        db.refresh(order)
+        create_event(db, order_id, "change_address", {"message": "success, address updated"})
+
+
     
 
         

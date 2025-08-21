@@ -20,9 +20,9 @@ class OrderWorkflow:
     def CancelOrder(self):
         self.cancelOrder=True
 
-    async def apply_signals(self, order_id: str):
+    async def apply_signals(self, order_id: str, payment_id: str, address: Dict[str, Any]):
         if self.cancelOrder:
-            await workflow.execute_activity(CancelOrder, order_id, schedule_to_close_timeout=timedelta(seconds=300))
+            await workflow.execute_activity(CancelOrder, order_id, payment_id, schedule_to_close_timeout=timedelta(seconds=300))
             return {"order_id": order_id, "status": "cancelled"}
         if self.newAddress is not None:
             address = self.newAddress
@@ -34,7 +34,7 @@ class OrderWorkflow:
     async def run (self, order_id: str, payment_id: str, items: List[Dict[str, Any]], address_json: Dict[str, Any]):
 
         # Checks for signals
-        appliedSignal = await self.apply_signals(order_id)
+        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
         if appliedSignal: 
             return appliedSignal
 
@@ -42,7 +42,7 @@ class OrderWorkflow:
         await workflow.execute_activity(ReceiveOrder, order_id, items, schedule_to_close_timeout=timedelta(seconds=300))
 
         # Checks for signals
-        appliedSignal = await self.apply_signals(order_id)
+        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
         if appliedSignal: 
             return appliedSignal
 
@@ -50,7 +50,7 @@ class OrderWorkflow:
         await workflow.execute_activity(ValidateOrder, order_id, schedule_to_close_timeout=timedelta(seconds=300))
 
         # Checks for signals
-        appliedSignal = await self.apply_signals(order_id)
+        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
         if appliedSignal: 
             return appliedSignal
 
@@ -58,7 +58,7 @@ class OrderWorkflow:
         await workflow.sleep(timedelta(milliseconds=100))
 
         # Checks for signals
-        appliedSignal = await self.apply_signals(order_id)
+        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
         if appliedSignal: 
             return appliedSignal
 
@@ -66,7 +66,7 @@ class OrderWorkflow:
         await workflow.execute_activity(ChargePayment, order_id, payment_id, schedule_to_close_timeout=timedelta(seconds=300))
 
         # Checks for signals
-        appliedSignal = await self.apply_signals(order_id)
+        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
         if appliedSignal: 
             return appliedSignal
 
