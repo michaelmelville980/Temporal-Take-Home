@@ -1,23 +1,16 @@
 from typing import Dict, Any, List
 from .error_helper import flaky_call
-from src.db.crud import create_event, create_order, validate_order, charge_payment
-from src.db.database import SessionLocal
+from db.crud import create_event, create_order, validate_order, charge_payment
+from db.database import SessionLocal
 
-
-
-
-async def order_received(order_id: str, items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def order_received(order_id: str, items: List[Dict[str, Any]], address_json: Dict[str, Any]) -> Dict[str, Any]:
     await flaky_call()
     db = SessionLocal()
     try:
-        order = create_order(db, order_id, items)
+        order = create_order(db, order_id, items, address_json)
     finally:
         db.close()
-    return {"order_id": order.id, "items": order.items}  # type: ignore
-
-
-
-
+    return {"order_id": order.id, "items": order.items, "address": order.address_json}  
 
 async def order_validated(order_id: str) -> bool:
     await flaky_call()
@@ -29,10 +22,6 @@ async def order_validated(order_id: str) -> bool:
     finally:
         db.close()
     return True
-
-
-
-
 
 async def payment_charged(order_id: str, payment_id: str) -> Dict[str, Any]:
     await flaky_call()
