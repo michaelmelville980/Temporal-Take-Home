@@ -9,6 +9,7 @@ metadata = Base.metadata
 class Orders(Base):
     __tablename__ = "orders"
     id = Column(String(64), primary_key=True)
+    items = Column(JSONB, nullable=True)
     state = Column(String(30), nullable=False, server_default="received") 
     address_json = Column(JSONB, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
