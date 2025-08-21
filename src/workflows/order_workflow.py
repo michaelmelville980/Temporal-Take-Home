@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 from activities.order_activities import ReceiveOrder, ValidateOrder, ChargePayment
 from activities.signal_activities import CancelOrder, UpdateAddress
 from workflows.shipping_workflow import ShippingWorkflow
+import asyncio
 
 @workflow.defn
 class OrderWorkflow:
@@ -11,6 +12,13 @@ class OrderWorkflow:
     def __init__ (self):
         self.newAddress = None
         self.cancelOrder = False
+        self.dispatchFailed = False
+        self.dispatchReason = None
+
+    @workflow.signal
+    def dispatch_failed(self, reason: str):
+        self.dispatchFailed = True
+        self.dispatchReason = reason
 
     @workflow.signal
     def UpdateAddress(self, address: Dict[str, Any]):
@@ -71,15 +79,33 @@ class OrderWorkflow:
             return appliedSignal
 
         # Step 5: Child ShippingWorkflow
-        await workflow.execute_child_workflow(ShippingWorkflow.run, order_id, task_queue="shipping-tq")
+        parent_id = workflow.info().workflow_id 
 
-        # Return
-        return {"order_id": order_id, "status": "completed"}
+        while True:
+            child = await workflow.start_child_workflow(ShippingWorkflow.run, order_id, parent_id, task_queue="shipping-tq")
+            child_task = asyncio.create_task(child.result())
+            await workflow.await_any(child_task, workflow.wait_condition(lambda: self.dispatchFailed))
+            if self.dispatchFailed:
+                reason = self.dispatchReason
+                self.dispatchFailed = False
+                try:
+                    await child.cancel()
+                    await child_task
+                except Exception:
+                    pass
+                continue
+            try:
+                await child_task
+                return {"order_id": order_id, "status": "shipped"}
+            except Exception as e:
+                continue
+
+  
 
 
 
-   
         
+                
 
-                   
-      
+                        
+            
