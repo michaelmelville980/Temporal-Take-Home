@@ -67,6 +67,16 @@ def test_charge_payment_multipleitem_multiplequantity(db_session):
     assert got.status == "charged"
     assert got.amount == 505.00
 
+def test_prepare_package(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    crud.prepare_package(db_session, ORDER_ID)
+    got = db_session.query(models.Orders).filter_by(id=ORDER_ID).one_or_none()
+    assert got is not None
+    assert got.id == ORDER_ID
+    assert got.state == "package_prepared"
+    assert got.items == ORDER_ITEM
+    assert got.address_json == ORDER_ADDRESS
+
 
 
 
