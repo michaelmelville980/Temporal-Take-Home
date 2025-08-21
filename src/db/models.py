@@ -1,17 +1,16 @@
 from sqlalchemy import Column, Integer, String, DateTime, func, ForeignKey, Numeric
 from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import JSON
+from .database import Base
 
-
-Base = declarative_base()
 metadata = Base.metadata
 
 class Orders(Base):
     __tablename__ = "orders"
     id = Column(String(64), primary_key=True)
-    items = Column(JSONB, nullable=True)
+    items = Column(JSON, nullable=True)
     state = Column(String(30), nullable=False, server_default="received") 
-    address_json = Column(JSONB, nullable=True)
+    address_json = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
@@ -28,5 +27,5 @@ class Events(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     order_id = Column(String, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
     type = Column(String(64), nullable=False)
-    payload_json = Column(JSONB, nullable=True)
+    payload_json = Column(JSON, nullable=True)
     ts = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
