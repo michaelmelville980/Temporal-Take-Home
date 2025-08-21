@@ -1,10 +1,16 @@
 from typing import Dict, Any
-from error_helper import flaky_call
+from .error_helper import flaky_call
+from src.db.crud import create_event, create_order 
+from src.db.database import SessionLocal
 
 async def order_received(order_id: str) -> Dict[str, Any]:
     await flaky_call()
-    # TODO: Implement DB write: insert new order record
-    return {"order_id": order_id, "items": [{"sku": "ABC", "qty": 1}]}
+    db = SessionLocal()
+    try:
+        order = create_order(db, order_id)
+    finally:
+        db.close()
+    return {"order_id": order_id}
 
 async def order_validated(order: Dict[str, Any]) -> bool:
     await flaky_call()
