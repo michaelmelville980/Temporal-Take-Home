@@ -29,6 +29,11 @@ def test_create_order_multiple(db_session):
     assert got1.items == ORDER_ITEM and got2.items == ORDER_ITEM_2
     assert got1.address_json == ORDER_ADDRESS and got2.address_json == ORDER_ADDRESS_2
 
+def test_create_order_idempotent(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS) #simulates retry
+    got = db_session.query(models.Orders).all()
+    assert len(got) == 1
 
 def test_validate_order(db_session):
     crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
