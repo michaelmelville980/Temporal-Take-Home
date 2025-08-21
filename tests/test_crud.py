@@ -31,7 +31,7 @@ def test_create_order_multiple(db_session):
 
 def test_create_order_idempotent(db_session):
     crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
-    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS) #simulates retry
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
     got = db_session.query(models.Orders).all()
     assert len(got) == 1
 
@@ -71,6 +71,24 @@ def test_charge_payment_multipleitem_multiplequantity(db_session):
     assert got.payment_id == PAYMENT_ID
     assert got.status == "charged"
     assert got.amount == 505.00
+
+def test_charge_payment_oneitem_onequantity_alreadypaid(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    crud.charge_payment(db_session, ORDER_ID, PAYMENT_ID)
+    crud.charge_payment(db_session, ORDER_ID, PAYMENT_ID)
+    got = db_session.query(models.Payments).all()
+    assert len(got) == 1
+    assert got[0].status == "charged"
+
+def test_charge_payment_oneitem_onequantity_failedtopaid(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    failed = models.Payments(payment_id=PAYMENT_ID, order_id=ORDER_ID, status="failed", amount=5.00)
+    db_session.add(failed)
+    db_session.commit()
+    crud.charge_payment(db_session, ORDER_ID, PAYMENT_ID)
+    got = db_session.query(models.Payments).all()
+    assert len(got) == 1
+    assert got[0].status == "charged"
 
 def test_prepare_package(db_session):
     crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
