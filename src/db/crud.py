@@ -9,12 +9,12 @@ def create_event(db: Session, order_id: str, type: str, payload_json: dict = Non
     db.refresh(event)
     return event
 
-def create_order(db: Session, order_id: str, items: List[Dict[str, Any]]):
-    order = models.Orders(id=order_id, items=items)
+def create_order(db: Session, order_id: str, items: List[Dict[str, Any]], address_json: Dict[str, Any]):
+    order = models.Orders(id=order_id, items=items, address_json=address_json)
     db.add(order)
     db.commit()
     db.refresh(order)
-    create_event(db, order.id, "order_received", {"items": items})
+    create_event(db, order.id, "order_received", {"items": items, "address": address_json})
     return order
 
 def validate_order(db: Session, order_id: str):

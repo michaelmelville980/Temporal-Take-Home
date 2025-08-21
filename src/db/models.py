@@ -10,7 +10,7 @@ class Orders(Base):
     id = Column(String(64), primary_key=True)
     items = Column(JSON, nullable=True)
     state = Column(String(30), nullable=False, server_default="received") 
-    address_json = Column(JSON, nullable=True)
+    address_json = Column(JSON, nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
