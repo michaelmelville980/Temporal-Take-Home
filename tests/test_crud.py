@@ -3,10 +3,12 @@ from db import crud, models
 # Inputs
 ORDER_ID = "abc"
 ORDER_ID_2 = "abcd"
-ORDER_ITEM = [{"name": "apple", "qty": 2, "price": 5.00}]
-ORDER_ITEM_2 = [{"name": "app", "qty": 1, "price": 100.00}]
+ORDER_ITEM = [{"name": "apple", "qty": 1, "price": 5.00}]
+ORDER_ITEM_2 = [{"name": "app", "qty": 5, "price": 100.00}]
+ORDER_ITEM_3 = [{"name": "app", "qty": 5, "price": 100.00}, {"name": "apple", "qty": 1, "price": 5.00}]
 ORDER_ADDRESS = {"address": "575 Lake Dr.", "city": "Sylvania", "state": "OH", "zipcode": "43560"}
 ORDER_ADDRESS_2 = {"address": "5 Lake Dr.", "city": "Temp", "state": "AL", "zipcode": "43561"}
+PAYMENT_ID = "123"
 
 # Tests
 def test_create_order_single(db_session):
@@ -38,6 +40,32 @@ def test_validate_order(db_session):
     assert got.items == ORDER_ITEM
     assert got.address_json == ORDER_ADDRESS
 
+def test_charge_payment_oneitem_onequantity(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    crud.charge_payment(db_session, ORDER_ID, PAYMENT_ID)
+    got = db_session.query(models.Payments).filter_by(payment_id=PAYMENT_ID).one_or_none()
+    assert got is not None
+    assert got.payment_id == PAYMENT_ID
+    assert got.status == "charged"
+    assert got.amount == 5.00
+
+def test_charge_payment_oneitem_multiplequantity(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM_2, ORDER_ADDRESS)
+    crud.charge_payment(db_session, ORDER_ID, PAYMENT_ID)
+    got = db_session.query(models.Payments).filter_by(payment_id=PAYMENT_ID).one_or_none()
+    assert got is not None
+    assert got.payment_id == PAYMENT_ID
+    assert got.status == "charged"
+    assert got.amount == 500.00
+
+def test_charge_payment_multipleitem_multiplequantity(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM_3, ORDER_ADDRESS)
+    crud.charge_payment(db_session, ORDER_ID, PAYMENT_ID)
+    got = db_session.query(models.Payments).filter_by(payment_id=PAYMENT_ID).one_or_none()
+    assert got is not None
+    assert got.payment_id == PAYMENT_ID
+    assert got.status == "charged"
+    assert got.amount == 505.00
 
 
 
