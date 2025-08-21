@@ -121,6 +121,35 @@ def test_ship_order(db_session):
     assert got.items == ORDER_ITEM
     assert got.address_json == ORDER_ADDRESS
 
+def test_remove_and_refund_order_nopayment(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    crud.remove_and_refund_order(db_session, ORDER_ID, PAYMENT_ID)
+    gotOrder = db_session.query(models.Orders).filter_by(id=ORDER_ID).one_or_none()
+    gotPayment = db_session.query(models.Payments).filter_by(payment_id=PAYMENT_ID).one_or_none()
+    assert gotOrder is not None
+    assert gotOrder.id == ORDER_ID
+    assert gotOrder.state == "cancelled"
+    assert gotOrder.items == ORDER_ITEM
+    assert gotOrder.address_json == ORDER_ADDRESS
+
+def test_remove_and_refund_order_alreadypayed(db_session):
+    crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
+    payed = models.Payments(payment_id=PAYMENT_ID, order_id=ORDER_ID, status="charged", amount=5.00)
+    db_session.add(payed)
+    db_session.commit()
+    crud.remove_and_refund_order(db_session, ORDER_ID, PAYMENT_ID)
+    gotOrder = db_session.query(models.Orders).filter_by(id=ORDER_ID).one_or_none()
+    gotPayment = db_session.query(models.Payments).filter_by(payment_id=PAYMENT_ID).one_or_none()
+    assert gotOrder is not None
+    assert gotOrder.id == ORDER_ID
+    assert gotOrder.state == "cancelled"
+    assert gotOrder.items == ORDER_ITEM
+    assert gotOrder.address_json == ORDER_ADDRESS
+    assert gotPayment is not None
+    assert gotPayment.payment_id == PAYMENT_ID
+    assert gotPayment.status == "refunded"
+    assert gotPayment.amount == 5.00
+
 
 
 
