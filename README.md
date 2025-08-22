@@ -2,6 +2,8 @@
 
 Orchestrates an Order LifeCycle using Temporal's open-source SDK and dev server.
 
+<img width="1353" height="293" alt="image" src="https://github.com/user-attachments/assets/9be53a51-4b96-4c0e-b743-b00111fa1087" />
+
 # Quick Start
 
 **0) Install deps**
