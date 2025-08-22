@@ -5,9 +5,9 @@ from db.database import SessionLocal
 from typing import Dict, Any
 from .error_helper import flaky_call
 
-@activity.defn
 async def persist_event_log(order_id: str, event_type: str, payload_json: dict) -> dict:
     await flaky_call()
+    
     def db_call():
         db = SessionLocal()
         try:
@@ -20,6 +20,7 @@ async def persist_event_log(order_id: str, event_type: str, payload_json: dict) 
     return {
         "event_id": event.id,
         "order_id": event.order_id,
-        "event_type": event.event_type,
+        "event_type": event.type,
         "payload": event.payload_json,
+        "time": event.ts.isoformat() if event.ts else None,  
     }
