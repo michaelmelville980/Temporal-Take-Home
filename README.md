@@ -69,16 +69,16 @@ PYTHONPATH=./src poetry run python src/cli.py status abc-001
 
 I set up a local Postgres database, created a role, and stored credentials in a git-ignored .env. While I’ve used Postgres with Prisma (JS ORM), this was my first time with Python tools, so I chose SQLAlchemy (schema/ORM) and Alembic (migrations).
 
-I implemented three main tables (orders, payments, events), made small tweaks, and wrote tests for Orders and Payments. With more time, I’d also test event logging and refactor some redundant session/commit code.
-
-For idempotency, I added checks to see if records already exist and validated state before updating. I also wrote tests specific to this behavior.
+I implemented three main tables (orders, payments, events) with persistence and interacted with them via (Workflow → Activity → Service → CRUD → DB).
 
 The schema and CRUD operations felt straightforward, but I struggled with configuring engines and sessions, using the add/commit/refresh pattern, async vs. sync concepts, and later Dockerizing the database.
 
-
 # Tests
 
-I wrote tests for database CRUD operations but not for Temporal. Instead, I validated parts of OrderWorkflow in the UI with sample CLI arguments. I was unable to resolve a bug where OrderEvents continually called ShippingEvents and didn't check signals. 
+I wrote unit tests for database CRUD operations and performed integration testing by running workflows against a local Temporal Server with sample CLI arguments.
+
+All CRUD unit tests passed successfully. The order and shipping workflows completed in 10–20 seconds on average. The "Cancel order" and "Check status" signals functioned as expected, but I was unable to get the "Update address" signal working. 
+
 
 ## Running Tests:
 ```bash
