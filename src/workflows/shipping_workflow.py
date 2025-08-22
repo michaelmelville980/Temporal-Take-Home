@@ -16,11 +16,11 @@ class ShippingWorkflow:
             await workflow.execute_activity(
                 PreparePackage,
                 args=[order_id],
-                start_to_close_timeout=timedelta(milliseconds=150),
+                start_to_close_timeout=timedelta(milliseconds=250),
                 retry_policy=RetryPolicy(
                     initial_interval=timedelta(milliseconds=1),  
-                    backoff_coefficient=2.0,            
-                    maximum_attempts=10,          
+                    backoff_coefficient=1.0,            
+                    maximum_attempts=20,          
                 ),
             )
         except asyncio.CancelledError:
@@ -34,11 +34,11 @@ class ShippingWorkflow:
             await workflow.execute_activity(
                 DispatchCarrier,
                 args=[order_id],
-                start_to_close_timeout=timedelta(milliseconds=100),
+                start_to_close_timeout=timedelta(milliseconds=250),
                 retry_policy=RetryPolicy(
                     initial_interval=timedelta(milliseconds=1),  
-                    backoff_coefficient=2.0,            
-                    maximum_attempts=10,          
+                    backoff_coefficient=1.0,            
+                    maximum_attempts=20,          
                 ),
             )
             return "done"

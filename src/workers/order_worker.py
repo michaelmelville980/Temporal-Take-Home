@@ -13,7 +13,8 @@ async def main():
         client,
         task_queue="order-tq",
         workflows=[OrderWorkflow],
-        activities=[ReceiveOrder, ValidateOrder, ChargePayment, CancelOrder, UpdateAddress]
+        activities=[ReceiveOrder, ValidateOrder, ChargePayment, CancelOrder, UpdateAddress],
+        max_concurrent_activities=50,
     )
 
     await worker.run()

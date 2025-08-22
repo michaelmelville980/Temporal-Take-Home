@@ -13,7 +13,8 @@ async def main():
         client,
         task_queue="shipping-tq",
         workflows=[ShippingWorkflow],
-        activities=[PreparePackage, DispatchCarrier]
+        activities=[PreparePackage, DispatchCarrier],
+        max_concurrent_activities=50,
     )
     await worker.run()
 

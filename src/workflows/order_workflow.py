@@ -38,11 +38,11 @@ class OrderWorkflow:
             await workflow.execute_activity(
                 CancelOrder,
                 args=[order_id, payment_id],
-                start_to_close_timeout=timedelta(milliseconds=75),
+                start_to_close_timeout=timedelta(milliseconds=50),
                 retry_policy=RetryPolicy(
                     initial_interval=timedelta(milliseconds=1),  
                     backoff_coefficient=1.0,                     
-                    maximum_attempts=10,
+                    maximum_attempts=20,
                 ),
             )
             self.status = "cancelled"
@@ -54,11 +54,11 @@ class OrderWorkflow:
             await workflow.execute_activity(
                 UpdateAddress,
                 args=[order_id, address],
-                start_to_close_timeout=timedelta(milliseconds=75),
+                start_to_close_timeout=timedelta(milliseconds=50),
                  retry_policy=RetryPolicy(
                     initial_interval=timedelta(milliseconds=1),  
                     backoff_coefficient=1.0,                     
-                    maximum_attempts=10,
+                    maximum_attempts=20,
                 ),
             )
         return None
@@ -74,11 +74,11 @@ class OrderWorkflow:
         await workflow.execute_activity(
             ReceiveOrder,
             args=[order_id, items, address_json],
-            start_to_close_timeout=timedelta(milliseconds=75),
+            start_to_close_timeout=timedelta(milliseconds=250),
             retry_policy=RetryPolicy(
                 initial_interval=timedelta(milliseconds=1),  
-                backoff_coefficient=2.0,            
-                maximum_attempts=10,          
+                backoff_coefficient=1.0,            
+                maximum_attempts=20,          
             ),
         )
         self.status = "Order Received"
@@ -91,11 +91,11 @@ class OrderWorkflow:
         await workflow.execute_activity(
             ValidateOrder,
             args=[order_id],
-            start_to_close_timeout=timedelta(milliseconds=75),
+            start_to_close_timeout=timedelta(milliseconds=50),
             retry_policy=RetryPolicy(
                 initial_interval=timedelta(milliseconds=1),  
                 backoff_coefficient=1.0,                     
-                maximum_attempts=10,
+                maximum_attempts=20,
             ),
         )
         self.status = "Order Validated"
@@ -116,11 +116,11 @@ class OrderWorkflow:
         await workflow.execute_activity(
             ChargePayment,
             args=[order_id, payment_id],
-            start_to_close_timeout=timedelta(milliseconds=75),
+            start_to_close_timeout=timedelta(milliseconds=250),
             retry_policy=RetryPolicy(
                 initial_interval=timedelta(milliseconds=1),  
                 backoff_coefficient=1.0,                     
-                maximum_attempts=10,
+                maximum_attempts=20,
             ),
         )
         self.status = "Payment Charged"
