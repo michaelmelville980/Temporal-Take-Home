@@ -3,8 +3,8 @@ from datetime import timedelta
 from typing import Dict, Any, List
 from activities.order_activities import ReceiveOrder, ValidateOrder, ChargePayment
 from activities.signal_activities import CancelOrder, UpdateAddress
+from temporalio.common import RetryPolicy
 import asyncio
-import uuid
 
 @workflow.defn
 class OrderWorkflow:
@@ -37,7 +37,12 @@ class OrderWorkflow:
             await workflow.execute_activity(
                 CancelOrder,
                 args=[order_id, payment_id],
-                schedule_to_close_timeout=timedelta(seconds=300),
+                start_to_close_timeout=timedelta(milliseconds=75),
+                retry_policy=RetryPolicy(
+                    initial_interval=timedelta(milliseconds=1),  
+                    backoff_coefficient=1.0,                     
+                    maximum_attempts=10,
+                ),
             )
             self.status = "cancelled"
             return {"order_id": order_id, "status": "cancelled"}
@@ -48,7 +53,12 @@ class OrderWorkflow:
             await workflow.execute_activity(
                 UpdateAddress,
                 args=[order_id, address],
-                schedule_to_close_timeout=timedelta(seconds=300),
+                start_to_close_timeout=timedelta(milliseconds=75),
+                 retry_policy=RetryPolicy(
+                    initial_interval=timedelta(milliseconds=1),  
+                    backoff_coefficient=1.0,                     
+                    maximum_attempts=10,
+                ),
             )
         return None
 
@@ -63,7 +73,12 @@ class OrderWorkflow:
         await workflow.execute_activity(
             ReceiveOrder,
             args=[order_id, items, address_json],
-            schedule_to_close_timeout=timedelta(seconds=300),
+            start_to_close_timeout=timedelta(milliseconds=135),
+            retry_policy=RetryPolicy(
+                initial_interval=timedelta(milliseconds=1),  
+                backoff_coefficient=2.0,            
+                maximum_attempts=10,          
+            ),
         )
         self.status = "Order Received"
 
@@ -75,7 +90,12 @@ class OrderWorkflow:
         await workflow.execute_activity(
             ValidateOrder,
             args=[order_id],
-            schedule_to_close_timeout=timedelta(seconds=300),
+            start_to_close_timeout=timedelta(milliseconds=75),
+            retry_policy=RetryPolicy(
+                initial_interval=timedelta(milliseconds=1),  
+                backoff_coefficient=1.0,                     
+                maximum_attempts=10,
+            ),
         )
         self.status = "Order Validated"
 
@@ -84,7 +104,7 @@ class OrderWorkflow:
             return applied
 
         # 3) Simulated manual review
-        await workflow.sleep(timedelta(milliseconds=100))
+        await workflow.sleep(timedelta(milliseconds=50))
         self.status = "Manual Review"
 
         applied = await self.apply_signals(order_id, payment_id, address_json)
@@ -95,7 +115,12 @@ class OrderWorkflow:
         await workflow.execute_activity(
             ChargePayment,
             args=[order_id, payment_id],
-            schedule_to_close_timeout=timedelta(seconds=300),
+            start_to_close_timeout=timedelta(milliseconds=75),
+            retry_policy=RetryPolicy(
+                initial_interval=timedelta(milliseconds=1),  
+                backoff_coefficient=1.0,                     
+                maximum_attempts=10,
+            ),
         )
         self.status = "Payment Charged"
 

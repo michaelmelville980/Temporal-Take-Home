@@ -3,6 +3,7 @@ from datetime import timedelta
 from activities.shipping_activities import PreparePackage, DispatchCarrier
 from typing import Dict, Any, List
 import asyncio 
+from temporalio.common import RetryPolicy
 
 @workflow.defn
 class ShippingWorkflow:
@@ -15,7 +16,12 @@ class ShippingWorkflow:
             await workflow.execute_activity(
                 PreparePackage,
                 args=[order_id],
-                schedule_to_close_timeout=timedelta(seconds=300),
+                start_to_close_timeout=timedelta(milliseconds=150),
+                retry_policy=RetryPolicy(
+                    initial_interval=timedelta(milliseconds=1),  
+                    backoff_coefficient=2.0,            
+                    maximum_attempts=10,          
+                ),
             )
         except asyncio.CancelledError:
             raise
@@ -28,7 +34,12 @@ class ShippingWorkflow:
             await workflow.execute_activity(
                 DispatchCarrier,
                 args=[order_id],
-                schedule_to_close_timeout=timedelta(seconds=300),
+                start_to_close_timeout=timedelta(milliseconds=100),
+                retry_policy=RetryPolicy(
+                    initial_interval=timedelta(milliseconds=1),  
+                    backoff_coefficient=2.0,            
+                    maximum_attempts=10,          
+                ),
             )
             return "done"
         except asyncio.CancelledError:
