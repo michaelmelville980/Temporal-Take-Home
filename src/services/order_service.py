@@ -37,7 +37,7 @@ async def payment_charged(order_id: str, payment_id: str) -> Dict[str, Any]:
         finally:
             db.close()
     payment = await asyncio.to_thread(db_call)  
-    return {"status": "charged", "amount": payment.amount}
+    return {"status": "charged", "amount": str(payment.amount)}
 
 
 
