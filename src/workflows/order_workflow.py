@@ -5,6 +5,7 @@ from activities.order_activities import ReceiveOrder, ValidateOrder, ChargePayme
 from activities.signal_activities import CancelOrder, UpdateAddress
 from temporalio.common import RetryPolicy
 import asyncio
+from .shipping_workflow import ShippingWorkflow
 
 @workflow.defn
 class OrderWorkflow:
@@ -73,7 +74,7 @@ class OrderWorkflow:
         await workflow.execute_activity(
             ReceiveOrder,
             args=[order_id, items, address_json],
-            start_to_close_timeout=timedelta(milliseconds=135),
+            start_to_close_timeout=timedelta(milliseconds=75),
             retry_policy=RetryPolicy(
                 initial_interval=timedelta(milliseconds=1),  
                 backoff_coefficient=2.0,            
@@ -130,30 +131,23 @@ class OrderWorkflow:
 
         # 5) Child ShippingWorkflow
         parent_id = workflow.info().workflow_id
-
         i = 0
+
         while True:
             i += 1
-            child = await workflow.start_child_workflow(
-                "ShippingWorkflow",
+            child = await workflow.execute_child_workflow(
+                ShippingWorkflow.run,
                 args=[order_id, parent_id],
                 id=f"ship-{order_id}-{i}",
                 task_queue="shipping-tq",
             )
-            await workflow.wait_condition(lambda: self.dispatchFailed or child.done())
-
-            if self.dispatchFailed:
-                self.dispatchFailed = False
-                try:
-                    await child.cancel()
-                    await child.result()   
-                except Exception:
-                    pass
-                continue
 
             try:
-                result = await child.result()
                 self.status = "Shipping Completed"
-                return {"order_id": order_id, "status": "shipped"}
-            except Exception as e:
+                return child   # or {"order_id": ..., "status": "shipped"}
+            except Exception:
+                if self.dispatchFailed:
+                    self.dispatchFailed = False
+                    self.status = f"Dispatch failed ({self.dispatchReason}), retrying..."
+                    continue
                 raise

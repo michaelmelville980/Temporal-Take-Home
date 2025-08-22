@@ -47,5 +47,5 @@ class ShippingWorkflow:
         except Exception as e:
             await parent.signal("dispatch_failed", "DispatchCarrier failed")
             raise
-        
+
    
