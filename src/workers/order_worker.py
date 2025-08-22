@@ -6,6 +6,7 @@ from activities.order_activities import ReceiveOrder, ValidateOrder, ChargePayme
 from activities.signal_activities import CancelOrder, UpdateAddress
 
 async def main():
+
     client = await Client.connect("localhost:7233")
 
     worker = Worker(
@@ -14,6 +15,7 @@ async def main():
         workflows=[OrderWorkflow],
         activities=[ReceiveOrder, ValidateOrder, ChargePayment, CancelOrder, UpdateAddress]
     )
+
     await worker.run()
 
 if __name__ == "__main__":
