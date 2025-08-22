@@ -3,17 +3,21 @@ from datetime import timedelta
 from typing import Dict, Any, List
 from activities.order_activities import ReceiveOrder, ValidateOrder, ChargePayment
 from activities.signal_activities import CancelOrder, UpdateAddress
-from workflows.shipping_workflow import ShippingWorkflow
 import asyncio
+import uuid
 
 @workflow.defn
 class OrderWorkflow:
-
-    def __init__ (self):
+    def __init__(self):
+        self.status = None
         self.newAddress = None
         self.cancelOrder = False
         self.dispatchFailed = False
         self.dispatchReason = None
+
+    @workflow.query
+    def get_status(self):
+        return self.status
 
     @workflow.signal
     def dispatch_failed(self, reason: str):
@@ -22,90 +26,109 @@ class OrderWorkflow:
 
     @workflow.signal
     def UpdateAddress(self, address: Dict[str, Any]):
-        self.newAddress=address
+        self.newAddress = address
 
     @workflow.signal
     def CancelOrder(self):
-        self.cancelOrder=True
+        self.cancelOrder = True
 
     async def apply_signals(self, order_id: str, payment_id: str, address: Dict[str, Any]):
         if self.cancelOrder:
-            await workflow.execute_activity(CancelOrder, order_id, payment_id, schedule_to_close_timeout=timedelta(seconds=300))
+            await workflow.execute_activity(
+                CancelOrder,
+                args=[order_id, payment_id],
+                schedule_to_close_timeout=timedelta(seconds=300),
+            )
+            self.status = "cancelled"
             return {"order_id": order_id, "status": "cancelled"}
+
         if self.newAddress is not None:
             address = self.newAddress
             self.newAddress = None
-            await workflow.execute_activity(UpdateAddress, order_id, address, schedule_to_close_timeout=timedelta(seconds=300))
+            await workflow.execute_activity(
+                UpdateAddress,
+                args=[order_id, address],
+                schedule_to_close_timeout=timedelta(seconds=300),
+            )
         return None
 
     @workflow.run
-    async def run (self, order_id: str, payment_id: str, items: List[Dict[str, Any]], address_json: Dict[str, Any]):
+    async def run(self, order_id: str, payment_id: str, items: List[Dict[str, Any]], address_json: Dict[str, Any]):
+        # Pre-signal check
+        applied = await self.apply_signals(order_id, payment_id, address_json)
+        if applied:
+            return applied
 
-        # Checks for signals
-        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
-        if appliedSignal: 
-            return appliedSignal
+        # 1) Receive order
+        await workflow.execute_activity(
+            ReceiveOrder,
+            args=[order_id, items, address_json],
+            schedule_to_close_timeout=timedelta(seconds=300),
+        )
+        self.status = "Order Received"
 
-        # Step 1: ReceiveOrder
-        await workflow.execute_activity(ReceiveOrder, order_id, items, schedule_to_close_timeout=timedelta(seconds=300))
+        applied = await self.apply_signals(order_id, payment_id, address_json)
+        if applied:
+            return applied
 
-        # Checks for signals
-        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
-        if appliedSignal: 
-            return appliedSignal
+        # 2) Validate order
+        await workflow.execute_activity(
+            ValidateOrder,
+            args=[order_id],
+            schedule_to_close_timeout=timedelta(seconds=300),
+        )
+        self.status = "Order Validated"
 
-        # Step 2: ValidateOrder
-        await workflow.execute_activity(ValidateOrder, order_id, schedule_to_close_timeout=timedelta(seconds=300))
+        applied = await self.apply_signals(order_id, payment_id, address_json)
+        if applied:
+            return applied
 
-        # Checks for signals
-        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
-        if appliedSignal: 
-            return appliedSignal
-
-        # Step 3: Timer (SimulatedManual Review)
+        # 3) Simulated manual review
         await workflow.sleep(timedelta(milliseconds=100))
+        self.status = "Manual Review"
 
-        # Checks for signals
-        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
-        if appliedSignal: 
-            return appliedSignal
+        applied = await self.apply_signals(order_id, payment_id, address_json)
+        if applied:
+            return applied
 
-        # Step 4: ChargePayment
-        await workflow.execute_activity(ChargePayment, order_id, payment_id, schedule_to_close_timeout=timedelta(seconds=300))
+        # 4) Charge payment
+        await workflow.execute_activity(
+            ChargePayment,
+            args=[order_id, payment_id],
+            schedule_to_close_timeout=timedelta(seconds=300),
+        )
+        self.status = "Payment Charged"
 
-        # Checks for signals
-        appliedSignal = await self.apply_signals(order_id, payment_id, address_json)
-        if appliedSignal: 
-            return appliedSignal
+        applied = await self.apply_signals(order_id, payment_id, address_json)
+        if applied:
+            return applied
 
-        # Step 5: Child ShippingWorkflow
-        parent_id = workflow.info().workflow_id 
+        # 5) Child ShippingWorkflow
+        parent_id = workflow.info().workflow_id
 
+        i = 0
         while True:
-            child = await workflow.start_child_workflow(ShippingWorkflow.run, order_id, parent_id, task_queue="shipping-tq")
-            child_task = asyncio.create_task(child.result())
-            await workflow.await_any(child_task, workflow.wait_condition(lambda: self.dispatchFailed))
+            i += 1
+            child = await workflow.start_child_workflow(
+                "ShippingWorkflow",
+                args=[order_id, parent_id],
+                id=f"ship-{order_id}-{i}",
+                task_queue="shipping-tq",
+            )
+            await workflow.wait_condition(lambda: self.dispatchFailed or child.done())
+
             if self.dispatchFailed:
-                reason = self.dispatchReason
                 self.dispatchFailed = False
                 try:
                     await child.cancel()
-                    await child_task
+                    await child.result()   
                 except Exception:
                     pass
                 continue
+
             try:
-                await child_task
+                result = await child.result()
+                self.status = "Shipping Completed"
                 return {"order_id": order_id, "status": "shipped"}
             except Exception as e:
-                continue
-
-  
-
-
-
-        
-                
-
-                        
-            
+                raise
