@@ -9,8 +9,18 @@ ORDER_ITEM_3 = [{"name": "app", "qty": 5, "price": 100.00}, {"name": "apple", "q
 ORDER_ADDRESS = {"address": "575 Lake Dr.", "city": "Sylvania", "state": "OH", "zipcode": "43560"}
 ORDER_ADDRESS_2 = {"address": "5 Lake Dr.", "city": "Temp", "state": "AL", "zipcode": "43561"}
 PAYMENT_ID = "123"
+EVENT_TYPE = "create-order"
+PAYLOAD_JSON = {"retry": 2}
 
 # Tests
+def test_create_event(db_session):
+    crud.create_event(db_session, ORDER_ID, EVENT_TYPE, PAYLOAD_JSON)
+    got = db_session.query(models.Events).filter_by(order_id=ORDER_ID).one_or_none()
+    assert got is not None
+    assert got.order_id == ORDER_ID
+    assert got.type == EVENT_TYPE
+    assert got.payload_json == PAYLOAD_JSON
+
 def test_create_order_single(db_session):
     crud.create_order(db_session, ORDER_ID, ORDER_ITEM, ORDER_ADDRESS)
     got = db_session.query(models.Orders).filter_by(id=ORDER_ID).one_or_none()
