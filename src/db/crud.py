@@ -140,7 +140,7 @@ def change_address(db: Session, order_id: str, address: Dict[str, Any]):
     # Updates address
     order.address = address
     db.commit()
-    db.refresh(address)
-
+    db.refresh(order)
+    return order
 
        
