@@ -2,10 +2,9 @@ from sqlalchemy.orm import Session
 from . import models
 from typing import Dict, Any, List
 from decimal import Decimal
-import json
 
 def create_event(db: Session, order_id: str, type: str, payload_json: dict):
-    event = models.Events(order_id=order_id, type=type, payload_json=json.dumps(payload_json))
+    event = models.Events(order_id=order_id, type=type, payload_json=payload_json)
     db.add(event)
     db.commit()
     db.refresh(event)
@@ -138,9 +137,9 @@ def change_address(db: Session, order_id: str, address: Dict[str, Any]):
         raise ValueError(f"Order {order_id} not found")
     
     # Updates address
-    order.address = address
+    order.address_json = address
     db.commit()
     db.refresh(order)
-    return order
+
 
        
