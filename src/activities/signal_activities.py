@@ -1,6 +1,6 @@
 from temporalio import activity
 from typing import Dict, Any, List
-from services.signals_service import cancel_order, update_address
+from services.signal_service import cancel_order, update_address
 
 @activity.defn
 async def CancelOrder(order_id: str, payment_id: str):
